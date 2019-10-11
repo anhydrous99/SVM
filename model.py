@@ -40,16 +40,29 @@ class SVM_Tree:
             if loss != 0:
                 loss.backward()
                 self.optimizers[cls].step()
+                return loss
+            return None
 
     def epoch(self, x_list, y_list):
+        losses = []
         for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps', dynamic_ncols=True):
             y = y_list[index]
-            self.step(x, y)
+            ls = self.step(x, y)
+            if ls is not None:
+                losses.append(ls)
+        return losses
 
     def train(self, x_list, y_list, n_epochs, shuffle=True):
         indexes = range(x_list)
-        for i in tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True):
+        losses = []
+        pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True)
+        for i in pbar:
+            last_loss = None
             if shuffle:
                 random.shuffle(indexes)
             for index in tqdm(indexes, unit='steps', dynamic_ncols=True):
-                self.step(x_list[index], y_list[index])
+                last_loss = self.step(x_list[index], y_list[index])
+            if last_loss is not None:
+                pbar.set_description(f'loss: {last_loss}')
+                losses.append(last_loss)
+        return losses
