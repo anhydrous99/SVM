@@ -51,3 +51,5 @@ class SVM_Tree:
         for i in tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True):
             if shuffle:
                 random.shuffle(indexes)
+            for index in tqdm(indexes, unit='steps', dynamic_ncols=True):
+                self.step(x_list[index], y_list[index])
