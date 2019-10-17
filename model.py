@@ -17,8 +17,11 @@ class SVM:
     def loss(self, x, y):
         return max(0, 1 - y * self.forward(x))**2.0 + self.epsilon * torch.dot(self.w, self.w)
 
-    def get_parameters(self):
-        return self.w, self.b
+    def get_parameters(self, numpy_tensor=False):
+        if not numpy_tensor:
+            return self.w, self.b
+        else:
+            return self.w.data.numpy(), self.b.data.numpy()
 
     def train_mode(self, mode):
         self.w.requires_grad_(mode)
