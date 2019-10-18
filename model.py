@@ -2,13 +2,13 @@ import torch
 import random
 import operator
 import numpy as np
+from torch.nn import functional as F
 from tqdm import tqdm
 
 class SVM:
     def __init__(self, input_size, epsilon, train_mode=True):
         self.input_size = input_size
         self.epsilon = torch.tensor(epsilon)
-        self.lossf = torch.nn.MSELoss()
 
         self.w = torch.rand(input_size, requires_grad=train_mode)
         self.b = torch.rand(1, requires_grad=train_mode)
@@ -17,7 +17,7 @@ class SVM:
         return torch.dot(self.w, x) + self.b
 
     def loss(self, x, y):
-        return self.lossf(self.forward(x), y)
+        return F.mse_loss(self.forward(x), y.reshape(1), reduction='mean')
 
     def get_parameters(self, numpy_tensor=False):
         if not numpy_tensor:
@@ -85,7 +85,7 @@ class SVMTree:
                     total_loss += last_loss.data
             loss_avg = total_loss.data.item() / len(indexes)
             losses.append(loss_avg)
-            pbar.set_description(f'loss: {loss_avg}')
+            pbar.set_description(f'loss: {round(loss_avg, 4)}')
 
     def train_mode(self, mode):
         for cls in self.classes:
