@@ -1,4 +1,5 @@
 import torch
+import pickle
 import random
 import operator
 import numpy as np
@@ -90,3 +91,9 @@ class SVMTree:
     def train_mode(self, mode):
         for cls in self.classes:
             self.svms[cls].train_mode(mode)
+
+    def save_tree(self, path, as_numpy=True):
+        to_save = {}
+        for cls in self.classes:
+            to_save[cls] = self.svms[cls].get_parameters(as_numpy)
+        pickle.dump(to_save, open(path, 'wb'))
