@@ -1,8 +1,6 @@
 import torch
 import pickle
 import random
-import operator
-import numpy as np
 from torch.nn import functional as F
 from tqdm import tqdm
 
@@ -12,7 +10,7 @@ class SVMTree:
         self.svms = {}
         self.optimizers = {}
         self.w = torch.randn(len(classes), input_size, dtype=torch.float32, requires_grad=train_mode)
-        self.b = torch.randn(len(classes), requires_grad=train_mode)
+        self.b = torch.randn(len(classes), dtype=torch.float32, requires_grad=train_mode)
         self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
         self.classes = classes
         self.input_size = input_size
@@ -53,7 +51,7 @@ class SVMTree:
         indexes = list(range(len(x_list[:, 0])))
         pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True, ascii=True)
         losses = []
-        for i in pbar:
+        for _ in pbar:
             total_loss = torch.zeros(1)
             if shuffle:
                 random.shuffle(indexes)
