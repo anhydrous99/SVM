@@ -19,8 +19,8 @@ class SVM:
     def loss(self, x, y):
         return F.mse_loss(self.forward(x), y.reshape(1), reduction='mean')
 
-    def get_parameters(self, numpy_tensor=False):
-        if not numpy_tensor:
+    def get_parameters(self, as_numpy=False):
+        if not as_numpy:
             return self.w, self.b
         else:
             return self.w.data.numpy(), self.b.data.numpy()
@@ -51,10 +51,11 @@ class SVMTree:
                 loss.backward()
                 self.optimizers[cls].step()
                 l += loss
-        return l
+        return l / float(len(self.classes))
 
     def inference(self, x):
         x = torch.tensor(x, dtype=torch.float32)
+        self.train_mode(False)
         inferenced = {}
         for cls in self.classes:
             inferenced[cls] = self.svms[cls].forward(x)
@@ -74,7 +75,7 @@ class SVMTree:
         pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True, ascii=True)
         losses = []
         for i in pbar:
-            total_loss = 0
+            total_loss = torch.zeros(1)
             if shuffle:
                 random.shuffle(indexes)
             for index in tqdm(indexes, unit='steps', dynamic_ncols=True, ascii=True):

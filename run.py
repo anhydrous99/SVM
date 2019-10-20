@@ -35,7 +35,7 @@ if args.subparser == 'svm':
     test_images_flat = test_images.reshape((test_images.shape[0], test_images.shape[1] * test_images.shape[2]))
 
     # Create svm tree
-    svm = SVMTree(training_images_flat.shape[1], list(range(10)), args.epochs)
+    svm = SVMTree(training_images_flat.shape[1], list(range(10)), args.learning_rate)
 
     # Train svm
     svm.train(training_images_flat, training_labels, args.epochs)
@@ -45,4 +45,4 @@ if args.subparser == 'svm':
 if args.subparser == 'att':
     test_images = mnist.test_images()
     test_labels = mnist.test_labels()
-    stage(test_images, test_labels, args.data, args.epsilon)
+    adv_ex, bro_ex = stage(test_images, test_labels, args.data, args.epsilon)
