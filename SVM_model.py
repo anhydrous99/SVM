@@ -7,9 +7,8 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 class SVM:
-    def __init__(self, input_size, epsilon, train_mode=True):
+    def __init__(self, input_size, train_mode=True):
         self.input_size = input_size
-        self.epsilon = torch.tensor(epsilon)
 
         self.w = torch.rand(input_size, requires_grad=train_mode)
         self.b = torch.rand(1, requires_grad=train_mode)
@@ -20,8 +19,8 @@ class SVM:
     def loss(self, x, y):
         return F.mse_loss(self.forward(x), y.reshape(1), reduction='mean')
 
-    def get_parameters(self, numpy_tensor=False):
-        if not numpy_tensor:
+    def get_parameters(self, as_numpy=False):
+        if not as_numpy:
             return self.w, self.b
         else:
             return self.w.data.numpy(), self.b.data.numpy()
@@ -32,15 +31,14 @@ class SVM:
 
 
 class SVMTree:
-    def __init__(self, input_size, epsilon, classes, learning_rate, train_mode=True):
+    def __init__(self, input_size, classes, learning_rate, train_mode=True):
         input_size = np.prod(input_size)
         self.svms = {}
         self.optimizers = {}
         for cls in classes:
-            self.svms[cls] = SVM(input_size, epsilon, train_mode)
+            self.svms[cls] = SVM(input_size, train_mode)
             self.optimizers[cls] = torch.optim.SGD(self.svms[cls].get_parameters(), learning_rate)
         self.classes = classes
-        self.epsilon = epsilon
 
     def step(self, x, y):
         l = 0
@@ -53,7 +51,7 @@ class SVMTree:
                 loss.backward()
                 self.optimizers[cls].step()
                 l += loss
-        return l
+        return l / float(len(self.classes))
 
     def inference(self, x):
         x = torch.tensor(x, dtype=torch.float32)
@@ -77,7 +75,7 @@ class SVMTree:
         pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True, ascii=True)
         losses = []
         for i in pbar:
-            total_loss = 0
+            total_loss = torch.zeros(1)
             if shuffle:
                 random.shuffle(indexes)
             for index in tqdm(indexes, unit='steps', dynamic_ncols=True, ascii=True):
@@ -92,7 +90,7 @@ class SVMTree:
         for cls in self.classes:
             self.svms[cls].train_mode(mode)
 
-    def save_tree(self, path, as_numpy=True):
+    def save_tree(self, path, as_numpy=False):
         to_save = {}
         for cls in self.classes:
             to_save[cls] = self.svms[cls].get_parameters(as_numpy)

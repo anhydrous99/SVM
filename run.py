@@ -1,15 +1,24 @@
 import mnist
 import argparse
-from model import SVMTree
+from SVM_model import SVMTree
+from fgsm import stage
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-l', '--learning_rate', default=0.0001, help='The learning rate')
-parser.add_argument('-e', '--epochs', default=20, help='Number of times to train over network')
-parser.add_argument('--train_gan', action='store_true', help='Switch to train GAN instead of SVMs')
-parser.add_argument('-p', '--path', default='SVM_tree.pickle', help='Where to save trained SVMs')
+parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
+subparsers = parser.add_subparsers(dest='subparser')
+svm_parser = subparsers.add_parser('svm', help='Create and train SVM for classifing mnist')
+svm_parser.add_argument('-l', '--learning_rate', default=0.0001, help='The learning rate')
+svm_parser.add_argument('-e', '--epochs', default=25, help='The number of epochs to train for')
+svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
+att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
+att_parser.add_argument('-e', '--epsilon', default=0.05, help='Aggressiveness of attack')
+att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
 args = parser.parse_args()
 
-if not args.train_gan:
+if args.subparser is None:
+    parser.print_help()
+    exit(0)
+
+if args.subparser == 'svm':
     # Download and get mnist
     training_images = mnist.train_images()
     test_images = mnist.test_images()
@@ -26,11 +35,14 @@ if not args.train_gan:
     test_images_flat = test_images.reshape((test_images.shape[0], test_images.shape[1] * test_images.shape[2]))
 
     # Create svm tree
-    svm = SVMTree(training_images_flat.shape[1], 0.003, list(range(10)), 0.0001)
+    svm = SVMTree(training_images_flat.shape[1], list(range(10)), args.learning_rate)
 
     # Train svm
-    svm.train(training_images_flat, training_labels, 50)
-    svm.save_tree('SVM_tree.pickle')
-    print(f'Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
-else:
-    pass # Train GAN
+    svm.train(training_images_flat, training_labels, args.epochs)
+    svm.save_tree(args.save)
+    print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
+
+if args.subparser == 'att':
+    test_images = mnist.test_images()
+    test_labels = mnist.test_labels()
+    adv_ex, bro_ex = stage(test_images, test_labels, args.data, args.epsilon)
