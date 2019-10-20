@@ -21,7 +21,7 @@ def np_to_image(arr, save_path=None, show=False):
     return img
 
 
-def fig_creator(start_image, gradient_image, end_image, y_target, y_predicted):
+def fig_creator(start_image, gradient_image, end_image, y_target, y_predicted, show=False, save=None):
     start_image = ((start_image + 1) * 127.5).astype(np.uint8)
     gradient_image = ((gradient_image + 1) * 127.5).astype(np.uint8)
     end_image = ((end_image + 1) * 127.5).astype(np.uint8)
@@ -35,4 +35,7 @@ def fig_creator(start_image, gradient_image, end_image, y_target, y_predicted):
     ax3 = f.add_subplot(1, 3, 3, title=r"$\epsilon$sign$(\nabla_x J(\theta,x,y))$" + f"-pred:{y_predicted}")
     ax3.axis('off')
     plt.imshow(end_image)
-    plt.show(block=True)
+    if save is not None:
+        plt.savefig(save)
+    if show:
+        plt.show(block=True)

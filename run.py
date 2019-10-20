@@ -49,4 +49,5 @@ if args.subparser == 'att':
     test_labels = mnist.test_labels()
     adv_ex, bro_ex, grad_ex = stage(test_images, test_labels, args.data, args.epsilon)
 
-    fig_creator(test_images[adv_ex[0][3]], grad_ex[0][0], adv_ex[0][0], adv_ex[0][1], adv_ex[0][2])
+    fig_creator(test_images[adv_ex[0][3]], grad_ex[0][0], adv_ex[0][0], adv_ex[0][1], adv_ex[0][2], True,
+                'asdf.png')
