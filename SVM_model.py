@@ -6,60 +6,39 @@ import numpy as np
 from torch.nn import functional as F
 from tqdm import tqdm
 
-class SVM:
-    def __init__(self, input_size, train_mode=True):
-        self.input_size = input_size
-
-        self.w = torch.rand(input_size, requires_grad=train_mode)
-        self.b = torch.rand(1, requires_grad=train_mode)
-
-    def forward(self, x):
-        return torch.dot(self.w, x) + self.b
-
-    def loss(self, x, y):
-        return F.mse_loss(self.forward(x), y.reshape(1), reduction='mean')
-
-    def get_parameters(self, as_numpy=False):
-        if not as_numpy:
-            return self.w, self.b
-        else:
-            return self.w.data.numpy(), self.b.data.numpy()
-
-    def train_mode(self, mode):
-        self.w.requires_grad_(mode)
-        self.b.requires_grad_(mode)
-
 
 class SVMTree:
     def __init__(self, input_size, classes, learning_rate, train_mode=True):
-        input_size = np.prod(input_size)
         self.svms = {}
         self.optimizers = {}
-        for cls in classes:
-            self.svms[cls] = SVM(input_size, train_mode)
-            self.optimizers[cls] = torch.optim.SGD(self.svms[cls].get_parameters(), learning_rate)
+        self.w = torch.randn(len(classes), input_size, dtype=torch.float32, requires_grad=train_mode)
+        self.b = torch.randn(len(classes), requires_grad=train_mode)
+        self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
         self.classes = classes
+        self.input_size = input_size
+
+    def forward(self, x):
+        return torch.matmul(self.w, x) + self.b
+
+    def loss(self, x, y):
+        f = self.forward(x)
+        return F.cross_entropy(f.view(1, -1), y.view((1)))
 
     def step(self, x, y):
-        l = 0
-        for cls in self.classes:
-            self.optimizers[cls].zero_grad()
-            x =  torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
-            t = torch.tensor(1.0 if y.astype(int) == cls else -1.0)
-            loss = self.svms[cls].loss(x, t)
-            if loss != 0:
-                loss.backward()
-                self.optimizers[cls].step()
-                l += loss
-        return l / float(len(self.classes))
+        self.optim.zero_grad()
+        x =  torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
+        t = torch.tensor(y, dtype=torch.long)
+        loss = self.loss(x, t)
+        if loss != 0:
+            loss.backward()
+            self.optim.step()
+        return loss
 
     def inference(self, x):
         x = torch.tensor(x, dtype=torch.float32)
         self.train_mode(False)
-        inferenced = {}
-        for cls in self.classes:
-            inferenced[cls] = self.svms[cls].forward(x)
-        return max(inferenced.items(), key=operator.itemgetter(1))[0]
+        inferenced = self.forward(x)
+        return torch.argmax(inferenced)
 
     def epoch(self, x_list, y_list):
         losses = []
@@ -87,14 +66,12 @@ class SVMTree:
             pbar.set_description(f'loss: {round(loss_avg, 2)}')
 
     def train_mode(self, mode):
-        for cls in self.classes:
-            self.svms[cls].train_mode(mode)
+        self.w.requires_grad_(mode)
+        self.b.requires_grad_(mode)
 
-    def save_tree(self, path, as_numpy=False):
-        to_save = {}
-        for cls in self.classes:
-            to_save[cls] = self.svms[cls].get_parameters(as_numpy)
-        pickle.dump(to_save, open(path, 'wb'))
+    def save_tree(self, path):
+        self.train_mode(False)
+        pickle.dump((self.w, self.b), open(path, 'wb'))
 
     def evaluate(self, x, y):
         correct = 0.0
