@@ -10,7 +10,7 @@ svm_parser.add_argument('-l', '--learning_rate', default=0.0001, type=float, hel
 svm_parser.add_argument('-e', '--epochs', default=25, type=int, help='The number of epochs to train for')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
-att_parser.add_argument('-e', '--epsilon', default=0.3, type=float, help='Aggressiveness of attack')
+att_parser.add_argument('-e', '--epsilon', default=0.05, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
 args = parser.parse_args()
 
@@ -45,4 +45,4 @@ if args.subparser == 'svm':
 if args.subparser == 'att':
     test_images = mnist.test_images()
     test_labels = mnist.test_labels()
-    adv_ex, bro_ex = stage(test_images, test_labels, args.data, args.epsilon)
+    adv_ex, bro_ex, grad_ex = stage(test_images, test_labels, args.data, args.epsilon)
