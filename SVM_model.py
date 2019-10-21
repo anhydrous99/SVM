@@ -7,37 +7,46 @@ from tqdm import tqdm
 
 class SVMTree:
     def __init__(self, input_size, classes, learning_rate, train_mode=True):
-        self.svms = {}
-        self.optimizers = {}
+        # These are the SVM's parameters
         self.w = torch.randn(len(classes), input_size, dtype=torch.float32, requires_grad=train_mode)
         self.b = torch.randn(len(classes), dtype=torch.float32, requires_grad=train_mode)
+        # The SVM's optimizer uses Stochastic Gradient Descent
         self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
+        # Save both the classes and the input size
         self.classes = classes
         self.input_size = input_size
 
+    # Pass the data through the SVMs
     def forward(self, x):
         return torch.matmul(self.w, x) + self.b
 
+    # Calculate the loss/error of the SVM
     def loss(self, x, y):
         f = self.forward(x)
         return F.cross_entropy(f.view(1, -1), y.view((1)))
 
+    # Perform a step of SGD to minimize the loss function
     def step(self, x, y):
-        self.optim.zero_grad()
+        self.optim.zero_grad() # Zero out the gradient
+        # Get x to a torch tensor type
         x =  torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
+        # Get y to a torch tensor type
         t = torch.tensor(y, dtype=torch.long)
+        # Calculate loss
         loss = self.loss(x, t)
         if loss != 0:
-            loss.backward()
-            self.optim.step()
-        return loss
+            loss.backward() # Use back-propagation to calculate gradients
+            self.optim.step() # Optimize the weights and biases according to the gradients
+        return loss # Return the loss
 
+    # Pass data through the SVMs without remembering operations
     def inference(self, x):
         x = torch.tensor(x, dtype=torch.float32)
         self.train_mode(False)
         inferenced = self.forward(x)
         return torch.argmax(inferenced)
 
+    # Train to an epoch
     def epoch(self, x_list, y_list):
         losses = []
         for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps', dynamic_ncols=True, ascii=True):
@@ -47,6 +56,7 @@ class SVMTree:
                 losses.append(ls)
         return losses
 
+    # The main training function
     def train(self, x_list, y_list, n_epochs, shuffle=True):
         indexes = list(range(len(x_list[:, 0])))
         pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True, ascii=True)
@@ -63,14 +73,17 @@ class SVMTree:
             losses.append(loss_avg)
             pbar.set_description(f'loss: {round(loss_avg, 2)}')
 
+    # The training mode, whether to have the weights and biases remember operations for back-propagation
     def train_mode(self, mode):
         self.w.requires_grad_(mode)
         self.b.requires_grad_(mode)
 
+    # Save the SVMs to a file
     def save_tree(self, path):
         self.train_mode(False)
         pickle.dump((self.w, self.b), open(path, 'wb'))
 
+    # Evaluate the SVMs performance
     def evaluate(self, x, y):
         correct = 0.0
         count = x.shape[0]

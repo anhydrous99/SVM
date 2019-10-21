@@ -3,10 +3,12 @@ import torch.nn.functional as F
 import pickle
 from tqdm import tqdm
 
+# The inferencing function, returns both the inferenced class and the output tensor
 def inference_dict(x, svm):
     output = torch.matmul(svm[0], x.flatten()) + svm[1]
     return torch.argmax(output), output
 
+# Performs the FGSM attack
 def fgsm_attack(image, epsilon, data_grad):
     sign_data_grad = data_grad.sign()
     preturbed_image = image + epsilon * sign_data_grad
