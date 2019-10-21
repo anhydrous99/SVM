@@ -7,11 +7,11 @@ from utils import fig_creator
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
 subparsers = parser.add_subparsers(dest='subparser')
 svm_parser = subparsers.add_parser('svm', help='Create and train SVM for classifing mnist')
-svm_parser.add_argument('-l', '--learning_rate', default=0.0001, type=float, help='The learning rate')
-svm_parser.add_argument('-e', '--epochs', default=25, type=int, help='The number of epochs to train for')
+svm_parser.add_argument('-l', '--learning_rate', default=0.007, type=float, help='The learning rate')
+svm_parser.add_argument('-e', '--epochs', default=6, type=int, help='The number of epochs to train for')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
-att_parser.add_argument('-e', '--epsilon', default=0.075, type=float, help='Aggressiveness of attack')
+att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
 att_parser.add_argument('--save')
 args = parser.parse_args()
@@ -50,4 +50,4 @@ if args.subparser == 'att':
     adv_ex, bro_ex, grad_ex = stage(test_images, test_labels, args.data, args.epsilon)
 
     fig_creator(test_images[adv_ex[0][3]], grad_ex[0][0], adv_ex[0][0], adv_ex[0][1], adv_ex[0][2], True,
-                'asdf.png')
+                'example.png')
