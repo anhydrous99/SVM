@@ -18,7 +18,7 @@ class SVMTree:
 
     # Pass the data through the SVMs
     def forward(self, x):
-        return torch.matmul(self.w, x) + self.b
+        return self.kernel_product(self.w, x) + self.b
 
     # Calculate the loss/error of the SVM
     def loss(self, x, y):
@@ -92,3 +92,16 @@ class SVMTree:
             if y_inf == y[index]:
                 correct += 1.0
         return correct / count
+
+    def kernel_product(self, w, x, mode='energy', s=0.1):
+        w_i = torch.t(w)
+        xmy = ((w_i - x[:, None]) ** 2).sum(0)
+
+        if mode == "gaussian":
+            K = torch.exp(- (torch.t(xmy) ** 2) / (s ** 2))
+        elif mode == "laplace":
+            K = torch.exp(- torch.sqrt(torch.t(xmy) + (s ** 2)))
+        elif mode == "energy":
+            K = torch.pow(torch.t(xmy) + (s ** 2), -.25)
+
+        return K
