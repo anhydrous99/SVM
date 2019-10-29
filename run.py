@@ -3,6 +3,7 @@ import argparse
 from SVM_model import SVMTree
 from fgsm import stage
 from utils import fig_creator
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
 subparsers = parser.add_subparsers(dest='subparser')
@@ -49,5 +50,5 @@ if args.subparser == 'att':
     test_labels = mnist.test_labels()
     adv_ex, bro_ex, grad_ex = stage(test_images, test_labels, args.data, args.epsilon)
 
-    fig_creator(test_images[adv_ex[0][3]], grad_ex[0][0], adv_ex[0][0], adv_ex[0][1], adv_ex[0][2], True,
-                'example.png')
+    for index, adv in tqdm(enumerate(adv_ex), total=len(adv_ex)):
+        fig_creator(test_images[adv[3]], grad_ex[index][0], adv[0], adv[1], adv[2], False, f'samples/{adv[3]}.png')
