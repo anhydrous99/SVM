@@ -1,29 +1,34 @@
 import torch
 import pickle
 import random
+import numpy as np
 from torch.nn import functional as F
 from tqdm import tqdm
 
 
 class SVMTree:
     def __init__(self, input_size, classes, learning_rate, train_mode=True):
+        # Save both the classes and the input size
+        self.classes = classes
+        self.input_size = input_size
+        # Save a RBF fourier kernel approximation parameters
+        self.gamma = 0.5
+        self.n_components = 1000
+        self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components)
+        self.random_offset_ = 2 * np.pi * torch.rand(self.n_components)
         # These are the SVM's parameters
         self.w = torch.randn(len(classes), input_size, dtype=torch.float32, requires_grad=train_mode)
         self.b = torch.randn(len(classes), dtype=torch.float32, requires_grad=train_mode)
         # The SVM's optimizer uses Stochastic Gradient Descent
         self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
-        # Save both the classes and the input size
-        self.classes = classes
-        self.input_size = input_size
 
     # Pass the data through the SVMs
     def forward(self, x):
-        return self.kernel_product(self.w, x) + self.b
+        return torch.matmul(self.kernel(self.w), self.kernel(x)) + self.b
 
     # Calculate the loss/error of the SVM
     def loss(self, x, y):
-        f = self.forward(x)
-        return F.cross_entropy(f.view(1, -1), y.view((1)))
+        return F.cross_entropy(self.forward(x).view(1, -1), y.view((1)))
 
     # Perform a step of SGD to minimize the loss function
     def step(self, x, y):
@@ -93,15 +98,9 @@ class SVMTree:
                 correct += 1.0
         return correct / count
 
-    def kernel_product(self, w, x, mode='energy', s=0.1):
-        w_i = torch.t(w)
-        xmy = ((w_i - x[:, None]) ** 2).sum(0)
-
-        if mode == "gaussian":
-            K = torch.exp(- (torch.t(xmy) ** 2) / (s ** 2))
-        elif mode == "laplace":
-            K = torch.exp(- torch.sqrt(torch.t(xmy) + (s ** 2)))
-        elif mode == "energy":
-            K = torch.pow(torch.t(xmy) + (s ** 2), -.25)
-
-        return K
+    def kernel(self, x):
+        projection = torch.matmul(x, self.random_weights_)
+        projection += self.random_offset_
+        projection = torch.cos(projection)
+        projection *= np.sqrt(2.) / np.sqrt(self.n_components)
+        return projection
