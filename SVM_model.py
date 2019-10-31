@@ -12,19 +12,19 @@ class SVMTree:
         self.classes = classes
         self.input_size = input_size
         # Save a RBF fourier kernel approximation parameters
-        self.gamma = 0.5
-        self.n_components = 1000
+        self.gamma = 0.0035
+        self.n_components = 930
         self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components)
         self.random_offset_ = 2 * np.pi * torch.rand(self.n_components)
         # These are the SVM's parameters
-        self.w = torch.randn(len(classes), input_size, dtype=torch.float32, requires_grad=train_mode)
+        self.w = torch.randn(len(classes), self.n_components, dtype=torch.float32, requires_grad=train_mode)
         self.b = torch.randn(len(classes), dtype=torch.float32, requires_grad=train_mode)
         # The SVM's optimizer uses Stochastic Gradient Descent
         self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
 
     # Pass the data through the SVMs
     def forward(self, x):
-        return torch.matmul(self.kernel(self.w), self.kernel(x)) + self.b
+        return torch.matmul(self.w, self.kernel(x)) + self.b
 
     # Calculate the loss/error of the SVM
     def loss(self, x, y):
@@ -54,7 +54,7 @@ class SVMTree:
     # Train to an epoch
     def epoch(self, x_list, y_list):
         losses = []
-        for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps', dynamic_ncols=True, ascii=True):
+        for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps', ascii=True):
             y = y_list[index]
             ls = self.step(x, y)
             if ls is not None:
@@ -64,19 +64,19 @@ class SVMTree:
     # The main training function
     def train(self, x_list, y_list, n_epochs, shuffle=True):
         indexes = list(range(len(x_list[:, 0])))
-        pbar = tqdm(range(n_epochs), unit='epochs', dynamic_ncols=True, ascii=True)
+        pbar = tqdm(range(n_epochs), unit='epochs', ascii=True)
         losses = []
         for _ in pbar:
             total_loss = torch.zeros(1)
             if shuffle:
                 random.shuffle(indexes)
-            for index in tqdm(indexes, unit='steps', dynamic_ncols=True, ascii=True):
+            for index in tqdm(indexes, unit='steps', ascii=True):
                 last_loss = self.step(x_list[index, :], y_list[index])
                 if last_loss is not None:
                     total_loss += last_loss.data
             loss_avg = total_loss.data.item() / len(indexes)
             losses.append(loss_avg)
-            pbar.set_description(f'loss: {round(loss_avg, 2)}')
+            pbar.set_description(f'loss: {round(loss_avg, 4)}')
 
     # The training mode, whether to have the weights and biases remember operations for back-propagation
     def train_mode(self, mode):
