@@ -12,13 +12,15 @@ class SVMTree:
         self.classes = classes
         self.input_size = input_size
         # Save a RBF fourier kernel approximation parameters
-        self.gamma = 0.0035
-        self.n_components = 930
+        self.gamma = 0.004
+        self.n_components = 940
         self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components)
         self.random_offset_ = 2 * np.pi * torch.rand(self.n_components)
         # These are the SVM's parameters
-        self.w = torch.randn(len(classes), self.n_components, dtype=torch.float32, requires_grad=train_mode)
-        self.b = torch.randn(len(classes), dtype=torch.float32, requires_grad=train_mode)
+        self.w = np.sqrt(2 * self.gamma) * torch.randn(len(classes), self.n_components, dtype=torch.float32)
+        self.b = 2 * np.pi * torch.rand(len(classes), dtype=torch.float32)
+        self.w.requires_grad_(train_mode)
+        self.b.requires_grad_(train_mode)
         # The SVM's optimizer uses Stochastic Gradient Descent
         self.optim = torch.optim.SGD((self.w, self.b), lr=learning_rate)
 
