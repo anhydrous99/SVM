@@ -7,13 +7,15 @@ from tqdm import tqdm
 
 
 class SVMTree:
-    def __init__(self, input_size, classes, learning_rate, train_mode=True):
+    def __init__(self, input_size, classes, learning_rate, train_mode=True, dimensions=940, gamma=0.004):
+        if input_size is None or classes is None or learning_rate is None:
+            return
         # Save both the classes and the input size
         self.classes = classes
         self.input_size = input_size
         # Save a RBF fourier kernel approximation parameters
-        self.gamma = 0.004
-        self.n_components = 940
+        self.gamma = gamma
+        self.n_components = dimensions
         self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components)
         self.random_offset_ = 2 * np.pi * torch.rand(self.n_components)
         # These are the SVM's parameters
@@ -34,17 +36,17 @@ class SVMTree:
 
     # Perform a step of SGD to minimize the loss function
     def step(self, x, y):
-        self.optim.zero_grad() # Zero out the gradient
+        self.optim.zero_grad()  # Zero out the gradient
         # Get x to a torch tensor type
-        x =  torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
+        x = torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
         # Get y to a torch tensor type
         t = torch.tensor(y, dtype=torch.long)
         # Calculate loss
         loss = self.loss(x, t)
         if loss != 0:
-            loss.backward() # Use back-propagation to calculate gradients
-            self.optim.step() # Optimize the weights and biases according to the gradients
-        return loss # Return the loss
+            loss.backward()  # Use back-propagation to calculate gradients
+            self.optim.step()  # Optimize the weights and biases according to the gradients
+        return loss  # Return the loss
 
     # Pass data through the SVMs without remembering operations
     def inference(self, x):
@@ -56,7 +58,7 @@ class SVMTree:
     # Train to an epoch
     def epoch(self, x_list, y_list):
         losses = []
-        for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps', ascii=True):
+        for index, x in tqdm(enumerate(x_list), total=len(x_list), unit='steps'):
             y = y_list[index]
             ls = self.step(x, y)
             if ls is not None:
@@ -66,19 +68,22 @@ class SVMTree:
     # The main training function
     def train(self, x_list, y_list, n_epochs, shuffle=True):
         indexes = list(range(len(x_list[:, 0])))
-        pbar = tqdm(range(n_epochs), unit='epochs', ascii=True)
+        pbar = tqdm(range(n_epochs), unit='epochs')
         losses = []
+        total_total_loss = 0
         for _ in pbar:
-            total_loss = torch.zeros(1)
+            total_loss = 0
             if shuffle:
                 random.shuffle(indexes)
-            for index in tqdm(indexes, unit='steps', ascii=True):
+            for index in tqdm(indexes, unit='steps'):
                 last_loss = self.step(x_list[index, :], y_list[index])
                 if last_loss is not None:
-                    total_loss += last_loss.data
-            loss_avg = total_loss.data.item() / len(indexes)
+                    total_loss += last_loss.detach().item()
+            loss_avg = total_loss / len(indexes)
             losses.append(loss_avg)
             pbar.set_description(f'loss: {round(loss_avg, 4)}')
+            total_total_loss += loss_avg if loss_avg is not None else 0
+        return float(total_total_loss / n_epochs)
 
     # The training mode, whether to have the weights and biases remember operations for back-propagation
     def train_mode(self, mode):
@@ -86,15 +91,20 @@ class SVMTree:
         self.b.requires_grad_(mode)
 
     # Save the SVMs to a file
-    def save_tree(self, path):
+    def save(self, path):
         self.train_mode(False)
-        pickle.dump((self.w, self.b), open(path, 'wb'))
+        pickle.dump(self.__dict__, open(path, 'wb'))
+
+    def load(self, path):
+        svm = pickle.load(open(path, 'rb'))
+        self.__dict__.update(svm)
+        return self
 
     # Evaluate the SVMs performance
     def evaluate(self, x, y):
         correct = 0.0
         count = x.shape[0]
-        for index in tqdm(range(count), desc='inference', ascii=True):
+        for index in tqdm(range(count), desc='inference'):
             y_inf = self.inference(x[index])
             if y_inf == y[index]:
                 correct += 1.0

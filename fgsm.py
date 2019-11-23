@@ -1,12 +1,15 @@
 import torch
 import torch.nn.functional as F
-import pickle
 from tqdm import tqdm
+from SVM_model import SVMTree
+import pickle
+
 
 # The inferencing function, returns both the inferenced class and the output tensor
 def inference_dict(x, svm):
     output = torch.matmul(svm[0], x.flatten()) + svm[1]
     return torch.argmax(output), output
+
 
 # Performs the FGSM attack
 def fgsm_attack(image, epsilon, data_grad):
@@ -15,8 +18,10 @@ def fgsm_attack(image, epsilon, data_grad):
     preturbed_image = torch.clamp(preturbed_image, -1, 1)
     return preturbed_image
 
+
 def stage(x_arr, y_arr, svm_path, epsilon):
-    svm = pickle.load(open(svm_path, 'rb'))
+    svm = SVMTree(None, None, None)
+    svm = svm.load(svm_path)
     correct = 0
     correct_prev = 0
     adv_examples = []
