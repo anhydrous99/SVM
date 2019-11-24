@@ -9,6 +9,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
 subparsers = parser.add_subparsers(dest='subparser')
 svm_tune_parser = subparsers.add_parser('svm_tune', help='Uses optuna to find best hyper-parameters')
+svm_tune_parser.add_argument('--use_fda', action='store_true', help='Uses FDA to find best points %')
 svm_parser = subparsers.add_parser('svm', help='Create and train SVM for classifing mnist')
 svm_parser.add_argument('-l', '--lr', default=0.07, type=float, help='The learning rate')
 svm_parser.add_argument('-e', '--epochs', default=20, type=int, help='The number of epochs to train for')
