@@ -4,7 +4,21 @@ from scipy.linalg import eig
 
 
 def calculate_fisher_discriminant(x_list, y_class):
-    pass
+    count = {}
+    x_dic = {}
+    score = {}
+    for index in range(x_list.shape[0]):
+        y = y_class[index]
+        if y in count.keys():
+            count[y] += 1
+            x_dic[y].append(x_list[index])
+        else:
+            count[y] = 1
+            x_dic[y] = [x_list[index]]
+
+    for y in count.keys():
+        x = np.stack(x_dic[y], axis=1)
+
 
 
 # Download and get mnist
