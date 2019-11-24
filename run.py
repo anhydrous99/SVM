@@ -21,16 +21,22 @@ att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The sav
 att_parser.add_argument('--save')
 args = parser.parse_args()
 
+
+def download_stuff():
+    # Download and get mnist
+    tri = mnist.train_images()
+    tei = mnist.test_images()
+    trl = mnist.train_labels()
+    tel = mnist.test_labels()
+    return tri, tei, trl, tel
+
+
 if args.subparser is None:
     parser.print_help()
     exit(0)
 
 if args.subparser == 'svm':
-    # Download and get mnist
-    training_images = mnist.train_images()
-    test_images = mnist.test_images()
-    training_labels = mnist.train_labels()
-    test_labels = mnist.test_labels()
+    training_images, test_images, training_labels, test_labels = download_stuff()
 
     # Set images to between 0 and 1
     training_images = training_images / 127.5 - 1
@@ -47,11 +53,7 @@ if args.subparser == 'svm':
     svm.save('SVM_tree.pickle')
 
 if args.subparser == 'svm_tune':
-    # Download and get mnist
-    training_images = mnist.train_images()
-    test_images = mnist.test_images()
-    training_labels = mnist.train_labels()
-    test_labels = mnist.test_labels()
+    training_images, test_images, training_labels, test_labels = download_stuff()
 
     # Set images to between 0 and 1
     training_images = training_images / 127.5 - 1
