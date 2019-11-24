@@ -21,14 +21,26 @@ att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The sav
 att_parser.add_argument('--save')
 args = parser.parse_args()
 
+training_images = None
+test_images = None
+training_labels = None
+test_labels = None
+training_images_flat = None
+test_images_flat = None
 
-def download_stuff():
+if args.subparser == 'svm' or args.subparser == 'svm_tune':
     # Download and get mnist
-    tri = mnist.train_images()
-    tei = mnist.test_images()
-    trl = mnist.train_labels()
-    tel = mnist.test_labels()
-    return tri, tei, trl, tel
+    training_images = mnist.train_images()
+    test_images = mnist.test_images()
+    training_labels = mnist.train_labels()
+    test_labels = mnist.test_labels()
+    # Set images to between 0 and 1
+    training_images = training_images / 127.5 - 1
+    test_images = test_images / 127.5 - 1
+    # Flatten to 2 dimensions
+    training_images_flat = training_images.reshape((training_images.shape[0],
+                                                    training_images.shape[1] * training_images.shape[2]))
+    test_images_flat = test_images.reshape((test_images.shape[0], test_images.shape[1] * test_images.shape[2]))
 
 
 if args.subparser is None:
@@ -36,16 +48,6 @@ if args.subparser is None:
     exit(0)
 
 if args.subparser == 'svm':
-    training_images, test_images, training_labels, test_labels = download_stuff()
-
-    # Set images to between 0 and 1
-    training_images = training_images / 127.5 - 1
-    test_images = test_images / 127.5 - 1
-
-    # Flatten to 2 dimensions
-    training_images_flat = training_images.reshape((training_images.shape[0],
-                                                    training_images.shape[1] * training_images.shape[2]))
-    test_images_flat = test_images.reshape((test_images.shape[0], test_images.shape[1] * test_images.shape[2]))
     svm = SVMTree(training_images_flat.shape[1], list(range(10)), args.lr,
                   dimensions=args.dims, gamma=args.gamma)
     svm.train(training_images_flat, training_labels, args.epochs)
@@ -53,25 +55,14 @@ if args.subparser == 'svm':
     svm.save('SVM_tree.pickle')
 
 if args.subparser == 'svm_tune':
-    training_images, test_images, training_labels, test_labels = download_stuff()
-
-    # Set images to between 0 and 1
-    training_images = training_images / 127.5 - 1
-    test_images = test_images / 127.5 - 1
-
-    # Flatten to 2 dimensions
-    training_images_flat = training_images.reshape((training_images.shape[0],
-                                                    training_images.shape[1] * training_images.shape[2]))
-    test_images_flat = test_images.reshape((test_images.shape[0], test_images.shape[1] * test_images.shape[2]))
-
     def objective(trial):
         learning_rate = trial.suggest_uniform('learning_rate', 0.0, 0.1)
         epochs = trial.suggest_int('epochs', 1, 20)
         gamma = trial.suggest_uniform('gamma', 0.0, 0.1)
         dimensions = trial.suggest_int('dimensions', 750, 1000)
-        svm = SVMTree(training_images_flat.shape[1], list(range(10)), learning_rate,
-                      dimensions=dimensions, gamma=gamma)
-        return svm.train(training_images_flat, training_labels, epochs)
+        local_svm = SVMTree(training_images_flat.shape[1], list(range(10)), learning_rate,
+                            dimensions=dimensions, gamma=gamma)
+        return local_svm.train(training_images_flat, training_labels, epochs)
 
     study = optuna.create_study()
     study.optimize(objective, n_trials=400)
