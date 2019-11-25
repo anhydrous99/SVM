@@ -10,14 +10,13 @@ from FDA import calculate_fisher_discriminant
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
 subparsers = parser.add_subparsers(dest='subparser')
 svm_tune_parser = subparsers.add_parser('svm_tune', help='Uses optuna to find best hyper-parameters')
-svm_tune_parser.add_argument('--use_fda', action='store_true', help='Uses FDA to find best points %')
 svm_parser = subparsers.add_parser('svm', help='Create and train SVM for classifing mnist')
-svm_parser.add_argument('-l', '--lr', default=0.07, type=float, help='The learning rate')
-svm_parser.add_argument('-e', '--epochs', default=20, type=int, help='The number of epochs to train for')
-svm_parser.add_argument('-g', '--gamma', default=0.003, type=float, help='The RBF kernel approximation gamma')
-svm_parser.add_argument('--dims', default=813, type=int, help='The number of dimensions to use with RBF kernel')
+svm_parser.add_argument('-l', '--lr', default=0.09388254962230703, type=float, help='The learning rate')
+svm_parser.add_argument('-e', '--epochs', default=14, type=int, help='The number of epochs to train for')
+svm_parser.add_argument('-g', '--gamma', default=0.00333990187, type=float, help='The RBF kernel approximation gamma')
+svm_parser.add_argument('--dims', default=834, type=int, help='The number of dimensions to use with RBF kernel')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
-svm_parser.add_argument('-c', '--cutoff', default=0.5, help='The cutoff percentage to use with FDA')
+svm_parser.add_argument('-c', '--cutoff', default=0.22884, help='The cutoff percentage to use with FDA')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
 att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
@@ -71,7 +70,7 @@ if args.subparser == 'svm_tune':
         return local_svm.train(x, y, epochs)
 
     study = optuna.create_study()
-    study.optimize(objective, n_trials=400)
+    study.optimize(objective, n_trials=500)
     print(study.best_params)
 
 if args.subparser == 'att':
