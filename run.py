@@ -5,6 +5,7 @@ from SVM_model import SVMTree
 from fgsm import stage
 from utils import fig_creator
 from tqdm import tqdm
+from FDA import calculate_fisher_discriminant
 
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
 subparsers = parser.add_subparsers(dest='subparser')
@@ -16,6 +17,7 @@ svm_parser.add_argument('-e', '--epochs', default=20, type=int, help='The number
 svm_parser.add_argument('-g', '--gamma', default=0.003, type=float, help='The RBF kernel approximation gamma')
 svm_parser.add_argument('--dims', default=813, type=int, help='The number of dimensions to use with RBF kernel')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
+svm_parser.add_argument('-c', '--cutoff', default=0.5, help='The cutoff percentage to use with FDA')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
 att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
@@ -49,9 +51,10 @@ if args.subparser is None:
     exit(0)
 
 if args.subparser == 'svm':
-    svm = SVMTree(training_images_flat.shape[1], list(range(10)), args.lr,
+    x, y = calculate_fisher_discriminant(training_images_flat, training_labels, args.cutoff)
+    svm = SVMTree(x.shape[1], list(range(10)), args.lr,
                   dimensions=args.dims, gamma=args.gamma)
-    svm.train(training_images_flat, training_labels, args.epochs)
+    svm.train(x, y, args.epochs)
     print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
     svm.save('SVM_tree.pickle')
 
@@ -61,9 +64,11 @@ if args.subparser == 'svm_tune':
         epochs = trial.suggest_int('epochs', 1, 20)
         gamma = trial.suggest_uniform('gamma', 0.0, 0.1)
         dimensions = trial.suggest_int('dimensions', 750, 1000)
-        local_svm = SVMTree(training_images_flat.shape[1], list(range(10)), learning_rate,
+        cutoff = trial.suggest_uniform('cutoff', 0.1, 0.9)
+        x, y = calculate_fisher_discriminant(training_images_flat, training_labels, cutoff)
+        local_svm = SVMTree(x.shape[1], list(range(10)), learning_rate,
                             dimensions=dimensions, gamma=gamma)
-        return local_svm.train(training_images_flat, training_labels, epochs)
+        return local_svm.train(x, y, epochs)
 
     study = optuna.create_study()
     study.optimize(objective, n_trials=400)
