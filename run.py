@@ -1,3 +1,4 @@
+import time
 import mnist
 import argparse
 import optuna
@@ -53,8 +54,11 @@ if args.subparser == 'svm':
     x, y = calculate_fisher_discriminant(training_images_flat, training_labels, args.cutoff)
     svm = SVMTree(x.shape[1], list(range(10)), args.lr,
                   dimensions=args.dims, gamma=args.gamma)
+    t1 = time.time()
     svm.train(x, y, args.epochs)
+    t2 = time.time()
     print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
+    print(f'It took: {t2 - t1}s to train')
     svm.save('SVM_tree.pickle')
 
 if args.subparser == 'svm_tune':
@@ -68,7 +72,6 @@ if args.subparser == 'svm_tune':
         local_svm = SVMTree(x.shape[1], list(range(10)), learning_rate,
                             dimensions=dimensions, gamma=gamma)
         return local_svm.train(x, y, epochs)
-
     study = optuna.create_study()
     study.optimize(objective, n_trials=500)
     print(study.best_params)
