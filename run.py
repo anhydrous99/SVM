@@ -2,9 +2,11 @@ import time
 import mnist
 import argparse
 import optuna
+import pandas as pd
+from optuna.pruners import MedianPruner
 from SVM_model import SVMTree
 from fgsm import stage
-from utils import fig_creator
+from utils import fig_creator, frange
 from tqdm import tqdm
 from FDA import calculate_fisher_discriminant
 
@@ -22,6 +24,7 @@ att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
 att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
 att_parser.add_argument('--save')
+fda_parser = subparsers.add_parser('fda', help='Run FDA tests')
 args = parser.parse_args()
 
 training_images = None
@@ -31,7 +34,7 @@ test_labels = None
 training_images_flat = None
 test_images_flat = None
 
-if args.subparser == 'svm' or args.subparser == 'svm_tune':
+if args.subparser == 'svm' or args.subparser == 'svm_tune' or args.subparser == 'fda':
     # Download and get mnist
     training_images = mnist.train_images()
     test_images = mnist.test_images()
@@ -83,3 +86,33 @@ if args.subparser == 'att':
 
     for index, adv in tqdm(enumerate(adv_ex), total=len(adv_ex)):
         fig_creator(test_images[adv[3]], grad_ex[index][0], adv[0], adv[1], adv[2], False, f'samples/{adv[3]}.png')
+
+if args.subparser == 'fda':
+    def objective(trial, ctf):
+        learning_rate = trial.suggest_uniform('learning_rate', 0.0, 0.1)
+        epochs = trial.suggest_int('epochs', 1, 20)
+        gamma = trial.suggest_uniform('gamma', 0.0, 0.1)
+        dimensions = trial.suggest_int('dimensions', 750, 1000)
+        x, y = calculate_fisher_discriminant(training_images_flat, training_labels, ctf)
+        local_svm = SVMTree(x.shape[1], list(range(10)), learning_rate,
+                            dimensions=dimensions, gamma=gamma)
+        return local_svm.train(x, y, epochs)
+    data = []
+    for ctf in frange(0.2, 0.8, 0.2):
+        study = optuna.create_study(pruner=MedianPruner())
+        study.optimize(lambda trial: objective(trial, ctf), n_trials=100)
+        best = study.best_params
+
+        x, y = calculate_fisher_discriminant(training_images_flat, training_labels, ctf)
+        svm = SVMTree(x.shape[1], list(range(10)), best['learning_rate'],
+                      dimensions=best['dimensions'], gamma=best['gamma'])
+        t1 = time.time()
+        svm.train(x, y, best['epochs'])
+        t2 = time.time()
+        print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
+        print(f'It took: {t2 - t1}s to train')
+        data.append({'accuracy': round(svm.evaluate(test_images_flat, test_labels) * 100, 2),
+                     'cutoff': ctf,
+                     'n_samples': x.shape[0]})
+    df = pd.DataFrame(data)
+    df.to_csv('data.csv')

@@ -39,3 +39,9 @@ def fig_creator(start_image, gradient_image, end_image, y_target, y_predicted, s
         plt.savefig(save)
     if show:
         plt.show(block=True)
+
+
+def frange(x, y, jump):
+  while x < y:
+    yield x
+    x += jump
