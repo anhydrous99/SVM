@@ -19,7 +19,7 @@ svm_parser.add_argument('-e', '--epochs', default=14, type=int, help='The number
 svm_parser.add_argument('-g', '--gamma', default=0.00333990187, type=float, help='The RBF kernel approximation gamma')
 svm_parser.add_argument('--dims', default=834, type=int, help='The number of dimensions to use with RBF kernel')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
-svm_parser.add_argument('-c', '--cutoff', default=0.22884, help='The cutoff percentage to use with FDA')
+svm_parser.add_argument('-c', '--cutoff', default=0.0, help='The cutoff percentage to use with FDA')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
 att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
@@ -90,29 +90,29 @@ if args.subparser == 'att':
 if args.subparser == 'fda':
     def objective(trial, ctf):
         learning_rate = trial.suggest_uniform('learning_rate', 0.0, 0.1)
-        epochs = trial.suggest_int('epochs', 1, 20)
         gamma = trial.suggest_uniform('gamma', 0.0, 0.1)
         dimensions = trial.suggest_int('dimensions', 750, 1000)
         x, y = calculate_fisher_discriminant(training_images_flat, training_labels, ctf)
         local_svm = SVMTree(x.shape[1], list(range(10)), learning_rate,
                             dimensions=dimensions, gamma=gamma)
-        return local_svm.train(x, y, epochs)
+        return local_svm.train(x, y, 14)
     data = []
-    for ctf in frange(0.2, 0.8, 0.2):
+    for ctf in frange(0.0, 1.0, 0.2):
         study = optuna.create_study(pruner=MedianPruner())
-        study.optimize(lambda trial: objective(trial, ctf), n_trials=100)
+        study.optimize(lambda trial: objective(trial, ctf), n_trials=25)
         best = study.best_params
 
         x, y = calculate_fisher_discriminant(training_images_flat, training_labels, ctf)
         svm = SVMTree(x.shape[1], list(range(10)), best['learning_rate'],
                       dimensions=best['dimensions'], gamma=best['gamma'])
         t1 = time.time()
-        svm.train(x, y, best['epochs'])
+        svm.train(x, y, 14)
         t2 = time.time()
         print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
         print(f'It took: {t2 - t1}s to train')
         data.append({'accuracy': round(svm.evaluate(test_images_flat, test_labels) * 100, 2),
                      'cutoff': ctf,
-                     'n_samples': x.shape[0]})
+                     'n_samples': x.shape[0],
+                     'time (s)': t2 - t1})
     df = pd.DataFrame(data)
     df.to_csv('data.csv')
