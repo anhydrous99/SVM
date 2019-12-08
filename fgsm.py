@@ -18,9 +18,10 @@ def fgsm_attack(image, epsilon, data_grad):
     return preturbed_image
 
 
-def stage(x_arr, y_arr, svm_path, epsilon):
-    svm = SVMTree(None, None, None)
-    svm = svm.load(svm_path)
+def stage(x_arr, y_arr, svm_path, epsilon, svm=None):
+    if svm is None:
+        svm = SVMTree(None, None, None)
+        svm = svm.load(svm_path)
     correct = 0
     correct_prev = 0
     adv_examples = []
@@ -76,4 +77,4 @@ def stage(x_arr, y_arr, svm_path, epsilon):
     accuracy = correct / float(x_arr.shape[0])
     prev_accuracy = correct_prev / (x_arr.shape[0])
     print(f'Epsilon: {epsilon}\tTest Accuracy = {accuracy}\tPrevious Accuracy = {prev_accuracy}')
-    return adv_examples, bro_examples, grad_examples
+    return adv_examples, bro_examples, grad_examples, accuracy

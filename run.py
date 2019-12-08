@@ -82,7 +82,7 @@ if args.subparser == 'svm_tune':
 if args.subparser == 'att':
     test_images = mnist.test_images() / 127.5 - 1
     test_labels = mnist.test_labels()
-    adv_ex, bro_ex, grad_ex = stage(test_images, test_labels, args.data, args.epsilon)
+    adv_ex, bro_ex, grad_ex, accuracy = stage(test_images, test_labels, args.data, args.epsilon)
 
     for index, adv in tqdm(enumerate(adv_ex), total=len(adv_ex)):
         fig_creator(test_images[adv[3]], grad_ex[index][0], adv[0], adv[1], adv[2], False, f'samples/{adv[3]}.png')
@@ -108,11 +108,13 @@ if args.subparser == 'fda':
         t1 = time.time()
         svm.train(x, y, 14)
         t2 = time.time()
+        adv_ex, bro_ex, grad_ex, peraccuracy = stage(test_images, test_labels, args.data, args.epsilon, svm)
         print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
         print(f'It took: {t2 - t1}s to train')
         data.append({'accuracy': round(svm.evaluate(test_images_flat, test_labels) * 100, 2),
                      'cutoff': ctf,
                      'n_samples': x.shape[0],
+                     'perturbed accuracy': peraccuracy,
                      'time (s)': t2 - t1})
     df = pd.DataFrame(data)
     df.to_csv('data.csv')
