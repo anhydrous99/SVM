@@ -6,7 +6,7 @@ from SVM_model import SVMTree
 
 # The inferencing function, returns both the inferenced class and the output tensor
 def inference_dict(x, svm):
-    output = torch.matmul(svm[0], x.flatten()) + svm[1]
+    output = svm.forward(x.flatten())
     return torch.argmax(output), output
 
 
