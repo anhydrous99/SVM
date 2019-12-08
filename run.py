@@ -108,7 +108,7 @@ if args.subparser == 'fda':
         t1 = time.time()
         svm.train(x, y, 14)
         t2 = time.time()
-        adv_ex, bro_ex, grad_ex, peraccuracy = stage(test_images, test_labels, args.data, args.epsilon, svm)
+        adv_ex, bro_ex, grad_ex, peraccuracy = stage(test_images, test_labels, 'SVM_tree.pickle', 0.08, svm)
         print(f'Test Accuracy: {round(svm.evaluate(test_images_flat, test_labels) * 100, 2)}%')
         print(f'It took: {t2 - t1}s to train')
         data.append({'accuracy': round(svm.evaluate(test_images_flat, test_labels) * 100, 2),
