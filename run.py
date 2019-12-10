@@ -17,10 +17,7 @@ svm_parser.add_argument('-e', '--epochs', default=20, type=int, help='The number
 svm_parser.add_argument('-g', '--gamma', default=0.003, type=float, help='The RBF kernel approximation gamma')
 svm_parser.add_argument('--dims', default=813, type=int, help='The number of dimensions to use with RBF kernel')
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
-<<<<<<< HEAD
 svm_parser.add_argument('-c', '--cutoff', default=0.0, help='The cutoff percentage to use with FDA')
-=======
->>>>>>> master
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
 att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
@@ -32,11 +29,7 @@ if args.subparser is None:
     parser.print_help()
     exit(0)
 
-<<<<<<< HEAD
 if args.subparser == 'svm' or args.subparser == 'svm_tune' or args.subparser == 'fda':
-=======
-if args.subparser == 'svm':
->>>>>>> master
     # Download and get mnist
     training_images = mnist.train_images()
     test_images = mnist.test_images()
