@@ -2,6 +2,8 @@ import mnist
 import argparse
 import optuna
 import pandas as pd
+import time
+from FDA import calculate_fisher_discriminant
 from optuna.pruners import MedianPruner
 from SVM_model import SVMTree
 from fgsm import stage
