@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 class SVMTree:
-    def __init__(self, input_size, classes, learning_rate, train_mode=True, dimensions=940, gamma=0.004):
+    def __init__(self, input_size, classes, learning_rate, train_mode=True, dimensions=940, gamma=0.004, device='cpu'):
         if input_size is None or classes is None or learning_rate is None:
             return
         # Save both the classes and the input size
@@ -16,11 +16,12 @@ class SVMTree:
         # Save a RBF fourier kernel approximation parameters
         self.gamma = gamma
         self.n_components = dimensions
-        self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components)
-        self.random_offset_ = 2 * np.pi * torch.rand(self.n_components)
+        self.device = device
+        self.random_weights_ = np.sqrt(2 * self.gamma) * torch.randn(self.input_size, self.n_components, device=device)
+        self.random_offset_ = 2 * np.pi * torch.rand(self.n_components, device=device)
         # These are the SVM's parameters
-        self.w = np.sqrt(2 * self.gamma) * torch.randn(len(classes), self.n_components, dtype=torch.float32)
-        self.b = 2 * np.pi * torch.rand(len(classes), dtype=torch.float32)
+        self.w = np.sqrt(2 * self.gamma) * torch.randn(len(classes), self.n_components, dtype=torch.float32, device=device)
+        self.b = 2 * np.pi * torch.rand(len(classes), dtype=torch.float32, device=device)
         self.w.requires_grad_(train_mode)
         self.b.requires_grad_(train_mode)
         # The SVM's optimizer uses Stochastic Gradient Descent
@@ -38,9 +39,9 @@ class SVMTree:
     def step(self, x, y):
         self.optim.zero_grad()  # Zero out the gradient
         # Get x to a torch tensor type
-        x = torch.tensor(x, dtype=torch.float32) if type(x) != torch.Tensor else x.clone().detach()
+        x = torch.tensor(x, dtype=torch.float32, device=self.device) if type(x) != torch.Tensor else x
         # Get y to a torch tensor type
-        t = torch.tensor(y, dtype=torch.long)
+        t = torch.tensor(y, dtype=torch.long, device=self.device) if type(x) != torch.Tensor else y
         # Calculate loss
         loss = self.loss(x, t)
         if loss != 0:
@@ -50,7 +51,7 @@ class SVMTree:
 
     # Pass data through the SVMs without remembering operations
     def inference(self, x):
-        x = torch.tensor(x, dtype=torch.float32)
+        x = torch.tensor(x, dtype=torch.float32, device=self.device)
         self.train_mode(False)
         inferenced = self.forward(x)
         return torch.argmax(inferenced)
@@ -67,6 +68,8 @@ class SVMTree:
 
     # The main training function
     def train(self, x_list, y_list, n_epochs, shuffle=True):
+        x_list_device = torch.tensor(np.stack(x_list), dtype=torch.float32, device=self.device)
+        y_list_device = torch.tensor(np.stack(y_list), dtype=torch.long, device=self.device)
         indexes = list(range(len(x_list[:, 0])))
         pbar = tqdm(range(n_epochs), unit='epochs')
         losses = []
@@ -76,9 +79,9 @@ class SVMTree:
             if shuffle:
                 random.shuffle(indexes)
             for index in tqdm(indexes, unit='steps'):
-                last_loss = self.step(x_list[index, :], y_list[index])
+                last_loss = self.step(x_list_device[index, :], y_list_device[index])
                 if last_loss is not None:
-                    total_loss += last_loss.detach().item()
+                    total_loss += last_loss.to(device='cpu').detach().item()
             loss_avg = total_loss / len(indexes)
             losses.append(loss_avg)
             pbar.set_description(f'loss: {round(loss_avg, 4)}')
