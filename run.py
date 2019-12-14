@@ -3,11 +3,12 @@ import argparse
 import optuna
 import pandas as pd
 import time
+import numpy as np
 from FDA import calculate_fisher_discriminant
 from optuna.pruners import MedianPruner
 from SVM_model import SVMTree
 from fgsm import stage
-from utils import fig_creator, frange
+from utils import frange
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='Create an SVM and Break it using an FGSM attack')
@@ -21,7 +22,7 @@ svm_parser.add_argument('--dims', default=813, type=int, help='The number of dim
 svm_parser.add_argument('-s', '--save', default='SVM_tree.pickle', help='Where to save the pickled data')
 svm_parser.add_argument('-c', '--cutoff', default=0.0, help='The cutoff percentage to use with FDA')
 att_parser = subparsers.add_parser('att', help='Attack the created SVMs')
-att_parser.add_argument('-e', '--epsilon', default=0.08, type=float, help='Aggressiveness of attack')
+att_parser.add_argument('-e', '--epsilon', default=0.18, type=float, help='Aggressiveness of attack')
 att_parser.add_argument('-d', '--data', default='SVM_tree.pickle', help='The saved svm to attack')
 att_parser.add_argument('--save')
 fda_parser = subparsers.add_parser('fda', help='Run FDA tests')
@@ -86,8 +87,30 @@ if args.subparser == 'att':
     test_labels = mnist.test_labels()
     adv_ex, bro_ex, grad_ex, accuracy = stage(test_images, test_labels, args.data, args.epsilon)
 
+    pimage = []
+    pimage90deg = []
+    pimage180def = []
+    pimage270deg = []
+    ys = []
     for index, adv in tqdm(enumerate(adv_ex), total=len(adv_ex)):
-        fig_creator(test_images[adv[3]], grad_ex[index][0], adv[0], adv[1], adv[2], False, f'samples/{adv[3]}.png')
+        pimage.append(adv[0].flatten())
+        pimage90deg.append(np.rot90(adv[0]).flatten())
+        pimage180def.append(np.rot90(adv[0], 2).flatten())
+        pimage270deg.append(np.rot90(adv[0], 3).flatten())
+        ys.append(adv[1])
+    dfnorm = pd.DataFrame(pimage)
+    df90deg = pd.DataFrame(pimage90deg)
+    df180deg = pd.DataFrame(pimage180def)
+    df270deg = pd.DataFrame(pimage270deg)
+    df2 = pd.DataFrame(ys)
+    superdfnorm = pd.concat([dfnorm, df2], axis=1, ignore_index=True)
+    superdf90deg = pd.concat([df90deg, df2], axis=1, ignore_index=True)
+    superdf180deg = pd.concat([df180deg, df2])
+    superdf270deg = pd.concat([df270deg, df2], axis=1, ignore_index=True)
+    superdfnorm.to_csv('perturbed_mnist_data.csv', index=False, header=False)
+    superdf90deg.to_csv('perturbed_mnist_data_rot90.csv', index=False, header=False)
+    superdf180deg.to_csv('perturbed_mnist_data_rot180.csv', index=False, header=False)
+    superdf270deg.to_csv('perturved_mnist_data_rot270.csv', index=False, header=False)
 
 if args.subparser == 'fda':
     def objective(trial, ctf):
